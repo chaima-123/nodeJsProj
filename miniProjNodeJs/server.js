@@ -6,12 +6,15 @@ var bcrypt = require("bcryptjs")
 const jwt = require('jsonwebtoken');
 var crypto = require("crypto");
 const multer = require('multer');
-const upload = multer({dest: 'uploads/'})
+
 
 var app = express();
 var port = 3000;
 
 var users = require("./Models/User")
+var commentaire = require("./Models/comment-model")
+var chat= require("./Models/Chat")
+
 var tokenss = require("./Models/Tokenn")
 var token = require("./Models/Test")
 
@@ -90,7 +93,7 @@ app.get("/register", (req, res) => {
 
 
 
-/*
+
 app.get('/reg',function (req,res) {
   
   userNew.save( function (err) {
@@ -99,7 +102,7 @@ app.get('/reg',function (req,res) {
         res.send("error")
     }
   });
-});*/
+});
 
 app.get("/signIn", (req, res) => {
   /*  user = new user({ firstName: req.body.firstName, email: req.body.email, password: req.body.password });
@@ -125,53 +128,6 @@ app.get("/signIn", (req, res) => {
 });
 
 
-app.get("/signIn", (req, res, next) => {
-  user.findOne({ email: 'chaima.besbes@esprit.tn' }, function (err, user) {
-    // error occur
-    if (err) {
-      return res.status(500).send({ msg: err.message });
-    }
-    // if email is exist into database i.e. email is associated with another user.
-    else if (user) {
-      return res.status(400).send({ msg: 'This email address is already associated with another account.' });
-    }
-    // if user is not exist into database then save the user into database for register account
-    else {
-      // password hashing for save into databse
-      req.body.password = bcrypt.hashSync(req.body.password, 10);
-      // create and save user
-      user = new user({ firstName: req.body.firstName, email: req.body.email, password: req.body.password });
-      user.save(function (err) {
-        if (err) {
-          return res.status(500).send({ msg: err.message });
-        }
-
-        // generate token and save
-
-        /* var token = new Token({ _userId: user._id, token: crypto.randomBytes(16).toString('hex') });
-         token.save(function (err) {
-           if(err){
-             return res.status(500).send({msg:err.message});
-           }*/
-        // Send email (use credintials of SendGrid)
-        var transporter = nodemailer.createTransport({ service: 'Sendgrid', auth: { user: process.env.SENDGRID_USERNAME, pass: process.env.SENDGRID_PASSWORD } });
-        var mailOptions = {
-          from: 'chaima.besbes2@gmail.com', to: user.email, subject: 'Account Verification Link', text: 'Hello ' + req.body.name + ',\n\n' +
-            'Please verify your account by clicking the link: \nhttp:\/\/' + req.headers.host + '\/confirmation\/' + user.email + '\/' + '\/' + token.token + + '\n\nThank You!\n'
-        };
-        transporter.sendMail(mailOptions, function (err) {
-          if (err) {
-            return res.status(500).send({ msg: 'Technical Issue!, Please click on resend for verify your Email.' });
-          }
-          return res.status(200).send('A verification email has been sent to ' + user.email + '. It will be expire after one day. If you not get verification Email click on resend token.');
-        });
-      });
-    }
-
-  });
-});
-
-
 var smtpTransport = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
@@ -188,6 +144,67 @@ var smtpTransport = nodemailer.createTransport({
    
  });
  */
+function makeid(length) {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  for (var i = 0; i < length; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+}
+
+console.log(makeid(5))
+app.get('/authentification',function (req,res) {
+    
+  users.findOneAndUpdate({email:req.query.email},{$set:{ resetPasswordToken:makeid(5)}},{new:true},
+  (function (err, result) {
+        
+    if(result) { 
+        var mailOptions={
+            to : result.email,
+            subject : "Changement de mot de passe",
+            text : "Vous trouvez ci-joint votre code d'authentification  "+ result.resetPasswordToken,
+        }
+        console.log(mailOptions);
+        smtpTransport.sendMail(mailOptions, function(error, response){
+         if(error){
+                console.log(error);
+           // res.end("error");
+         }
+    });
+    res.send(result);
+   }
+   else{
+    console.log(err)
+ } 
+   
+  })    
+  )
+  })
+  
+
+  app.post('/verifyCode',function (req,res) {
+    //res.send("ok");
+   //res.sendFile(__dirname + "/public/changepassword.html"); 
+    users.findOneAndUpdate({resetPasswordToken:req.query.resetPasswordToken},{$set:{resetPasswordToken:""}},{new:true},
+    function(err, result) { 
+    if(err)
+     { 
+         console.log(result.resetPasswordToken);
+         res.send(err);
+        } 
+   else
+   { 
+  res.send(result) 
+ 
+   }
+}) ; 
+})
+  
+
+
+
 app.get('/usercheck', function (req, res) {
   users.findOne({ email: req.query.email }, function (err, user) {
     if (err) {
@@ -210,7 +227,6 @@ app.get('/usercheck', function (req, res) {
         tel:req.query.tel,
         city :req.query.city
 
-
       });
       userNew.password = bcrypt.hashSync(req.query.password, 10);
 
@@ -219,6 +235,7 @@ app.get('/usercheck', function (req, res) {
         if (err) {
           return res.status(500).send({ msg: err.message });
         }
+
         tt = new token({ _userId: userNew._id, token: crypto.randomBytes(16).toString('hex') });
         tt.save(function (err) {
           if (err) {
@@ -357,4 +374,338 @@ app.get('/update',function(req,res){
    
    })
 });
+
+
+
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, './uploads/');
+  },
+  filename: function(req, file, cb) {
+    cb(null,file.originalname);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // reject a file
+  if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 1024 * 1024 * 5
+  },
+  fileFilter: fileFilter
+});
+
+
+app.post('/uploadd', upload.single('image'), function (req, res, next) {
+  userNew = new users({
+    firstName: "imen",
+    image : req.body,
+    email: "kkk"
+   
+  });
+  if (!req.file) return res.send('Please upload a file')
+
+  userNew.save(function (err,result) {
+    if (err) {
+      return res.status(500).send({ msg: err.message });
+    }
+    return (res.send(result))
+  });
+});
+
+
+var fs = require('fs');
+
+
+
+// Post files
+app.post(
+  "/upload",
+  multer({
+    storage: storage
+  }).single('upload'), function(req, res) {
+   // console.log(req.file);
+   // console.log(req.body);
+    res.redirect("/uploads/" + req.file.filename);
+    console.log(req.file.filename);
+    return res.status(200).end();
+  });
+
+app.get('/uploads/:upload', function (req, res){
+  file = req.params.upload;
+  console.log(req.params.upload);
+  var img = fs.readFileSync(__dirname + "/uploads/" + file);
+  res.writeHead(200, {'Content-Type': 'image/png' });
+  res.end(img, 'binary');
+
+});
+
+
+app.get('/send', function(err,res){
+  if (err) {
+    return res.status(500).send({ msg: err.message });
+  }
+ 
+  res.writeHead(200, {'Content-Type': 'image/jpeg'});
+
+      res.sendFile('./uploads/image.png');
+  
+});
+
+
+app.use('/uploads', express.static('uploads'));
+
+
+//Affichage de tous les utilisateurs
+app.get('/showPrestataire', function (req, res) {
+  users.find({ role:"prestataire" }).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+  
+});
+
+//Affichage de tous les utilisateurs
+app.get('/showPlomb', function (req, res) {
+  users.find({ role:"prestataire", profession:"Plombier" }).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+  
+});
+
+app.get('/showChauf', function (req, res) {
+  users.find({ role:"prestataire", profession:"Chauffagiste" }).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+  
+});
+
+app.get('/showElect', function (req, res) {
+  users.find({ role:"prestataire", profession:"Electricien" }).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+  
+});
+
+
+app.get('/updateRole',function(req,res){
+  users.findOneAndUpdate({id:req.query.id},{$set:{role:"prestataire" ,profession:req.query.profession , description:req.query.description}},{new:true},function(err,result){
+       if(err) console.log(err.message) ;
+     res.send(result);
+   })
+   });
+
+   app.get('/lastRecord',function(req,res){
+    users.find().limit(1).sort({$natural:-1}).exec(function (err, result)
+    {   // console.log(result) 
+    users.findOneAndUpdate({id:result[0].id},{$set:{image:"/uploads/"+result[0]._id +".jpeg"}},{new:true},function(err,ress){
+         if(err) 
+         console.log(err.message) ;
+       res.send(ress);
+     //console.log(ress+"kkkkkkkk")
+     })
+     });
+    });
+
+
+    app.get('/updateUser',function(req,res){
+      users.findOneAndUpdate({id:req.query.id},{$set:{firstName:req.query.firstName , lastName:req.query.lastName , 
+        email:req.query.email , tel:req.query.tel}},{new:true},function(err,result){
+           if(err) console.log(err.message) ;
+         res.send(result);
+       })
+       });
+
+       app.get('/updatePassword',function(req,res){
+        users.findOneAndUpdate({id:req.query.id},{$set:{password:bcrypt.hashSync(req.query.password, 10)}},{new:true},function(err,result){
+             if(err) console.log(err.message) ;
+           res.send(result);
+         })
+         });
+
+
+app.post('/checkPass', function (req, res, next) {
+  users.findOne({ id: req.query.id }, function (err, result) {
+    if (err) {
+      return res.status(500).send({ msg: err.message });
+    }
+    //var passwordIsValid = bcrypt.compareSync(req.query.password, result.password);
+    
+    else if (!bcrypt.compareSync(req.query.password, result.password)) {
+      result.message ="wrong password"
+    }
+    
+    // user successfully logged in
+    else {
+      result.message = 'succed' ;
+    }
+    res.send(result)
+
+  });
+
+});
+
+
+app.get('/rate',function (req,res) {
+    
+  users.findOne( {id:req.query.id}),(function (err, user) {
+        
+    if(user) 
+       {
+        users.findOneAndUpdate({id:user.id},
+         function(err, result) { 
+          result.rate = (req.query.rate + result.rate)/2
+
+            if(err) { throw err; } 
+            else
+              console.log("okkkkkkkkkk") 
+          }) ;
+       }
+
+    else {   console.log("okkkkkkkkkk") }
+
+    res.send(user);
+   
+})
+   
+})
+
+
+
+app.get('/aa',function(req,res){
+  users.findOne({id:req.query.id},function(err,user){
+       if(err) console.log(err.message) ;
+     //res.send(result);
+
+    else {
+      users.findOneAndUpdate({id:user.id},{rate : (req.query.rate+ user.rate)/2},{new:true},
+       function(err, result) { 
+        
+
+          if(err) { throw err; } 
+          else
+            console.log("up") 
+        }) ;
+     }
+     res.send(user);
+
+   })
+   });
+
+
+   
+app.get("/addComment", (req, res) => {
+  var commentaireNew = new commentaire({
+    idPrestataire: req.query.idPrestataire,
+    idUser: req.query.idUser,
+    userName:req.query.userName,
+    dateCommentaire:req.query.dateCommentaire,
+    contenu:req.query.contenu,
+  image: req.query.image}
+  );
+  commentaireNew.save(function (err, result) {
+    res.send(result);
+  });
+});
+
+
+app.get('/rating',function(req,res){
+  users.findOneAndUpdate({id:req.query.id},{$set:{rate:req.query.rate}},{new:true},function(err,result){
+       if(err) console.log(err.message) ;
+     res.send(result);
+   })
+   });
+   
+   app.get('/showComment', function (req, res) {
+    commentaire.find({ idPrestataire: req.query.idPrestataire }).sort({'_id' : -1}).exec(function (err, result) {
+      if (err) res.send(err)
+      else res.json(result)
+    })  
+  });
+
+
+  app.get('/deleteComment', function (req, res) {
+    commentaire.findOneAndDelete({ id: req.query.id }).exec(function (err, result) {
+      if (err) res.send(err)
+      else res.send(result)
+    })
+  });
+
+  app.get('/updateComment', function (req, res) {
+    commentaire.findOneAndUpdate({id:req.query.id},{$set:{contenu:req.query.contenu}},{new:true},function(err,result){
+      if (err) res.send(err)
+      else res.send(result)
+    })
+  });
+  
+ 
+
+
+  /*var chatNew = new chat({
+    user_name: "chaima",
+   // user_image_url: req.query.idUser,
+    is_sent_by_me:false,
+    text:"coucouuuuu",
+    }
+  );
+  chatNew.save(function (err, result) {
+    console.log(result);
+  });
+*/
+
+  app.get('/addChat', function (req, res) {
+    var chatNew = new chat({
+      user_name: req.query.user_name,
+      rec: req.query.rec,
+      text: req.query.text,
+     }
+    );
+    chatNew.save(function (err, result) {
+      if (err) res.send(err)
+      else     res.send(result);
+
+    })
+    
+  });
+    
+
+  app.get('/findChat', function (req, res) {
+    
+   // { user_name: { $in: [ "chaima", "oumaima" ] } }  
+  chat.find(   { $and: [ { user_name: { $in: [ req.query.user_name, req.query.rec ] } } ,
+   { rec: { $in: [  req.query.rec, req.query.user_name, ] } }   ] }
+    ).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+})
+
+
+app.get('/updateStatus', function (req, res) {
+  chat.find({user_name:req.query.user_name},function(err,result){
+    for(var i = 0; i < result.length;i++)
+          {
+      chat.findOneAndUpdate({user_name:result[i].user_name},{$set:{is_sent_by_me:true}},{new:true},function(err,resultt){
+        if (err) res.send(err)
+         console.log(resultt)
+      })
+
+    }
+    if (err) res.send(err)
+    else res.send(result)
+  })
+});
+
+
 
