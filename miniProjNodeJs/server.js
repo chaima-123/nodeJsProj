@@ -104,46 +104,18 @@ app.get('/reg',function (req,res) {
   });
 });
 
-app.get("/signIn", (req, res) => {
-  /*  user = new user({ firstName: req.body.firstName, email: req.body.email, password: req.body.password });
-    user.save(function (err) {
-        if (err) { 
-          return res.status(500).send({msg:err.message});
-        }
-  
-        // create and save user
-     
-            // generate token and save
-            
-                // Send email (use credintials of SendGrid)
-                var transporter = nodemailer.createTransport({ service: 'Sendgrid', auth: { user: process.env.SENDGRID_USERNAME, pass: process.env.SENDGRID_PASSWORD } });
-                var mailOptions = { from: 'chaima.besbes2@gmail.com', to: 'chaima.besbes@esprit.tn', subject: 'Account Verification Link', text: 'Hello '+ req.body.firstName +',\n\n' + 'Please verify your account by clicking the link: \nhttp:\/\/' + req.headers.host + '\/confirmation\/' + user.email + '\/' + '\n\nThank You!\n' };
-                transporter.sendMail(mailOptions, function (err) {
-                    if (err) { 
-                        return res.status(500).send({msg:'Technical Issue!, Please click on resend for verify your Email.'});
-                     }
-                    return res.status(200).send('A verification email has been sent to ' + user.email + '. It will be expire after one day. If you not get verification Email click on resend token.');
-                });
-            });*/
-});
 
 
 var smtpTransport = nodemailer.createTransport({
   service: "gmail",
   host: "smtp.gmail.com",
   auth: {
-    user: "chammoo.bes@gmail.com",
-    pass: "chahrazed"
+    user: "jobber.esprit@gmail.com",
+    pass: "jobber123"
   }
 });
 
-/*userNew = new usera ( {     
-   firstName: "haha",
-   email: "haha",
-   password:"aaa"
-   
- });
- */
+
 function makeid(length) {
   var text = "";
   var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -184,20 +156,18 @@ app.get('/authentification',function (req,res) {
   })
   
 
-  app.post('/verifyCode',function (req,res) {
-    //res.send("ok");
-   //res.sendFile(__dirname + "/public/changepassword.html"); 
+  app.post('/verifyCode',function (req,res) 
+  {
     users.findOneAndUpdate({resetPasswordToken:req.query.resetPasswordToken},{$set:{resetPasswordToken:""}},{new:true},
     function(err, result) { 
     if(err)
      { 
-         console.log(result.resetPasswordToken);
-         res.send(err);
+       console.log(result.resetPasswordToken);
+       res.send(err);
         } 
    else
    { 
   res.send(result) 
- 
    }
 }) ; 
 })
@@ -332,7 +302,6 @@ app.post('/loginn', function (req, res, next) {
       result.message = "Your Email has not been verified. Please click on resend" ;
      }
 
-    // user successfully logged in
     else
     {
       result.message ="succed";
@@ -375,8 +344,6 @@ app.get('/update',function(req,res){
    })
 });
 
-
-
 const storage = multer.diskStorage({
   destination: function(req, file, cb) {
     cb(null, './uploads/');
@@ -404,23 +371,6 @@ const upload = multer({
 });
 
 
-app.post('/uploadd', upload.single('image'), function (req, res, next) {
-  userNew = new users({
-    firstName: "imen",
-    image : req.body,
-    email: "kkk"
-   
-  });
-  if (!req.file) return res.send('Please upload a file')
-
-  userNew.save(function (err,result) {
-    if (err) {
-      return res.status(500).send({ msg: err.message });
-    }
-    return (res.send(result))
-  });
-});
-
 
 var fs = require('fs');
 
@@ -434,7 +384,7 @@ app.post(
   }).single('upload'), function(req, res) {
    // console.log(req.file);
    // console.log(req.body);
-    res.redirect("/uploads/" + req.file.filename);
+    //res.redirect("/uploads/" + req.file.filename);
     console.log(req.file.filename);
     return res.status(200).end();
   });
@@ -475,15 +425,15 @@ app.get('/showPrestataire', function (req, res) {
 
 //Affichage de tous les utilisateurs
 app.get('/showPlomb', function (req, res) {
-  users.find({ role:"prestataire", profession:"Plombier" }).exec(function (err, result) {
+  users.find({ role:"prestataire", profession:"Plombier",  adress :req.query.adress }).exec(function (err, result) {
     if (err) res.send(err)
     else res.json(result)
   })
   
 });
 
-app.get('/showChauf', function (req, res) {
-  users.find({ role:"prestataire", profession:"Chauffagiste" }).exec(function (err, result) {
+app.get('/showMenuisier', function (req, res) {
+  users.find({ role:"prestataire", profession:"Menuisier",  adress :req.query.adress }).exec(function (err, result) {
     if (err) res.send(err)
     else res.json(result)
   })
@@ -491,7 +441,7 @@ app.get('/showChauf', function (req, res) {
 });
 
 app.get('/showElect', function (req, res) {
-  users.find({ role:"prestataire", profession:"Electricien" }).exec(function (err, result) {
+  users.find({ role:"prestataire", profession:"Electricien" , adress :req.query.adress }).exec(function (err, result) {
     if (err) res.send(err)
     else res.json(result)
   })
@@ -509,7 +459,7 @@ app.get('/updateRole',function(req,res){
    app.get('/lastRecord',function(req,res){
     users.find().limit(1).sort({$natural:-1}).exec(function (err, result)
     {   // console.log(result) 
-    users.findOneAndUpdate({id:result[0].id},{$set:{image:"/uploads/"+result[0]._id +".jpeg"}},{new:true},function(err,ress){
+    users.findOneAndUpdate({id:req.query.id},{$set:{image:"/uploads/"+result[0]._id +".jpeg"}},{new:true},function(err,ress){
          if(err) 
          console.log(err.message) ;
        res.send(ress);
@@ -541,11 +491,9 @@ app.post('/checkPass', function (req, res, next) {
       return res.status(500).send({ msg: err.message });
     }
     //var passwordIsValid = bcrypt.compareSync(req.query.password, result.password);
-    
     else if (!bcrypt.compareSync(req.query.password, result.password)) {
       result.message ="wrong password"
     }
-    
     // user successfully logged in
     else {
       result.message = 'succed' ;
@@ -557,10 +505,8 @@ app.post('/checkPass', function (req, res, next) {
 });
 
 
-app.get('/rate',function (req,res) {
-    
-  users.findOne( {id:req.query.id}),(function (err, user) {
-        
+app.get('/rate',function (req,res) {  
+  users.findOne( {id:req.query.id}),(function (err, user) {      
     if(user) 
        {
         users.findOneAndUpdate({id:user.id},
@@ -572,13 +518,10 @@ app.get('/rate',function (req,res) {
               console.log("okkkkkkkkkk") 
           }) ;
        }
-
     else {   console.log("okkkkkkkkkk") }
-
     res.send(user);
    
-})
-   
+})  
 })
 
 
@@ -587,19 +530,16 @@ app.get('/aa',function(req,res){
   users.findOne({id:req.query.id},function(err,user){
        if(err) console.log(err.message) ;
      //res.send(result);
-
     else {
       users.findOneAndUpdate({id:user.id},{rate : (req.query.rate+ user.rate)/2},{new:true},
-       function(err, result) { 
-        
-
+       function(err, result) 
+       { 
           if(err) { throw err; } 
           else
             console.log("up") 
         }) ;
      }
      res.send(user);
-
    })
    });
 
@@ -627,7 +567,8 @@ app.get('/rating',function(req,res){
    })
    });
    
-   app.get('/showComment', function (req, res) {
+   app.get('/showComment', function (req, res) 
+   {
     commentaire.find({ idPrestataire: req.query.idPrestataire }).sort({'_id' : -1}).exec(function (err, result) {
       if (err) res.send(err)
       else res.json(result)
@@ -642,29 +583,26 @@ app.get('/rating',function(req,res){
     })
   });
 
-  app.get('/updateComment', function (req, res) {
+  app.get('/updateComment', function (req, res)
+  {
     commentaire.findOneAndUpdate({id:req.query.id},{$set:{contenu:req.query.contenu}},{new:true},function(err,result){
       if (err) res.send(err)
       else res.send(result)
     })
   });
-  
- 
 
 
-  /*var chatNew = new chat({
-    user_name: "chaima",
-   // user_image_url: req.query.idUser,
-    is_sent_by_me:false,
-    text:"coucouuuuu",
-    }
-  );
-  chatNew.save(function (err, result) {
-    console.log(result);
+  app.delete('/deleteComment', function (req, res)
+  {
+    commentaire.findOneAndDelete({id:req.query.id},function(err,result){
+      if (err) res.send(err)
+      else res.send(200)
+   
+    })
   });
-*/
-
-  app.get('/addChat', function (req, res) {
+  
+app.get('/addChat', function (req, res) 
+  {
     var chatNew = new chat({
       user_name: req.query.user_name,
       rec: req.query.rec,
@@ -674,14 +612,10 @@ app.get('/rating',function(req,res){
     chatNew.save(function (err, result) {
       if (err) res.send(err)
       else     res.send(result);
-
-    })
-    
+       })   
   });
-    
 
   app.get('/findChat', function (req, res) {
-    
    // { user_name: { $in: [ "chaima", "oumaima" ] } }  
   chat.find(   { $and: [ { user_name: { $in: [ req.query.user_name, req.query.rec ] } } ,
    { rec: { $in: [  req.query.rec, req.query.user_name, ] } }   ] }
@@ -707,5 +641,11 @@ app.get('/updateStatus', function (req, res) {
   })
 });
 
-
+app.get('/updateCity', function (req, res)
+{
+  users.findOneAndUpdate({id:req.query.id},{$set:{city:req.query.city}},{new:true},function(err,result){
+    if (err) res.send(err)
+    else res.send(result)
+  })
+});
 

@@ -9,7 +9,6 @@ var userSchema= new Schema({
     firstName:{ type: String, default:""},
     lastName:{ type: String, default:""},
     adress:{ type: String, default:""},
-    city:{ type: String, default:""},
     tel: { type: String, default:""},
     email: { type: String, unique: true },
     isVerified: { type: Boolean, default: false },  
