@@ -10,6 +10,7 @@ const multer = require('multer');
 
 var app = express();
 var port = 3000;
+var service = require("./Models/Service")
 
 var users = require("./Models/User")
 var commentaire = require("./Models/comment-model")
@@ -471,7 +472,7 @@ app.get('/updateRole',function(req,res){
 
     app.get('/updateUser',function(req,res){
       users.findOneAndUpdate({id:req.query.id},{$set:{firstName:req.query.firstName , lastName:req.query.lastName , 
-        email:req.query.email , tel:req.query.tel}},{new:true},function(err,result){
+        email:req.query.email , tel:req.query.tel , image:"/uploads/"+req.query.id +".jpeg"}},{new:true},function(err,result){
            if(err) console.log(err.message) ;
          res.send(result);
        })
@@ -492,7 +493,7 @@ app.post('/checkPass', function (req, res, next) {
     }
     //var passwordIsValid = bcrypt.compareSync(req.query.password, result.password);
     else if (!bcrypt.compareSync(req.query.password, result.password)) {
-      result.message ="wrong password"
+      result.message ="Mot de passe érroné"
     }
     // user successfully logged in
     else {
@@ -545,7 +546,7 @@ app.get('/aa',function(req,res){
 
 
    
-app.get("/addComment", (req, res) => {
+app.post("/addComment", (req, res) => {
   var commentaireNew = new commentaire({
     idPrestataire: req.query.idPrestataire,
     idUser: req.query.idUser,
@@ -649,3 +650,114 @@ app.get('/updateCity', function (req, res)
   })
 });
 
+app.get("/demandeService", (req, res) => {
+  var serviceNew = new service({
+    client_id: req.query.client_id,
+    client_name: req.query.client_name,
+    prestatire_id:req.query.prestatire_id,
+    prestatire_name:req.query.prestatire_name,
+    type:req.query.type,
+    description:req.query.description,
+    etat:"En attente"
+  }
+  );
+  serviceNew.save(function (err, result) {
+    res.send(result);
+  });
+});
+
+
+
+app.get('/showServiceClient', function (req, res) {
+  service.find({ client_id: req.query.client_id}).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+  
+});
+
+
+app.get('/showServicePro', function (req, res) {
+  service.find({ prestatire_id: req.query.prestatire_id}).exec(function (err, result) {
+    if (err) res.send(err)
+    else res.json(result)
+  })
+  
+});
+
+
+
+app.get('/updateEtatService',function(req,res){
+  service.findOneAndUpdate({id:req.query.id},{$set:{etat:req.query.etat}},{new:true},function(err,result){
+       if(err) console.log(err.message) ;
+     res.send(result);
+   })
+   });
+
+   app.get('/ConfirmerDemande',function (req,res) {
+    
+    service.findOneAndUpdate({id:req.query.id},{$set:{ etat:"accepté"}},{new:true},
+    (function (err, result) {
+      users.findOne({ id: result.client_id }, function (err, user) {
+          
+      if(result) { 
+          var mailOptions={
+              to : user.email,
+              subject : "Confirmation de votre demande",
+              text : "Bonjour Mr/Madame, votre demande a été bien accéptée.Merci pour votre confiance.  "
+          }
+          console.log(mailOptions);
+          smtpTransport.sendMail(mailOptions, function(error, response){
+           if(error){
+                  console.log(error);
+             // res.end("error");
+           }
+      });
+      res.send(result);
+     }
+     else{
+      console.log(err)
+   } 
+  })
+    })    
+    )
+    })
+    
+  
+    app.get('/RefuserDemande',function (req,res) {
+      
+      service.findOneAndUpdate({id:req.query.id},{$set:{ etat:"refusé"}},{new:true},
+      (function (err, result) {
+        users.findOne({ id: result.client_id }, function (err, user) {
+            
+        if(result) { 
+            var mailOptions={
+                to : user.email,
+                subject : "Annulation de votre demande",
+                text : "Bonjour Mr/Mme, Je vous prie de bien vouloir accepter toutes mes excuses pour cette indisponibilité. J’espère que nous pourrons nous rencontrer à une autre date.   "
+            }
+            console.log(mailOptions);
+            smtpTransport.sendMail(mailOptions, function(error, response){
+             if(error){
+                    console.log(error);
+               // res.end("error");
+             }
+        });
+        res.send(result);
+       }
+       else{
+        console.log(err)
+     } 
+    })
+      })    
+      )
+      })
+
+
+      app.get('/findUser', function (req, res) {
+        users.findOne({ id:req.query.id}).exec(function (err, result) {
+          if (err) res.send(err)
+          else res.send(result)
+        })
+        
+      });
